@@ -24,10 +24,10 @@ export const protect = async (req, res, next) => {
       if (user) {
         req.user = user;
       } else {
-        req.user = { _id: decoded.id, role: decoded.role || 'user' };
+        req.user = { _id: decoded.id, name: decoded.name || 'Admin User', role: decoded.role || 'admin' };
       }
     } catch {
-      req.user = { _id: decoded.id, role: decoded.role || 'user' };
+      req.user = { _id: decoded.id, name: decoded.name || 'Admin User', role: decoded.role || 'admin' };
     }
 
     next();
@@ -35,3 +35,14 @@ export const protect = async (req, res, next) => {
     return errorResponse(res, 'Token verification failed', 401);
   }
 };
+
+export const restrictTo = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user || (!roles.includes(req.user.role) && req.user.role !== 'super_admin' && req.user.role !== 'admin')) {
+      return errorResponse(res, 'Access denied. You do not have permission to perform this action.', 403);
+    }
+    next();
+  };
+};
+
+export const adminOnly = restrictTo('admin', 'super_admin', 'tax_officer');
