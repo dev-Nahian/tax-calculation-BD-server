@@ -29,9 +29,33 @@ const taxYearSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'upcoming', 'archived'],
-      default: 'upcoming',
+      enum: ['draft', 'underReview', 'verified', 'active', 'archived'],
+      default: 'underReview',
       index: true,
+    },
+    taxRuleVersion: {
+      type: String,
+      default: 'v1.0-act2023',
+      trim: true,
+    },
+    sourceVersion: {
+      type: String,
+      default: 'src-nbr-2024',
+      trim: true,
+    },
+    lastVerifiedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    verificationNote: {
+      type: String,
+      default: 'Tax rules verified against published National Board of Revenue (NBR) documents.',
+      trim: true,
     },
     description: {
       type: String,

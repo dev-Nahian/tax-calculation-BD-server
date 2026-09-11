@@ -33,12 +33,14 @@ const fallbackTaxSources = [
   },
 ];
 
+import mongoose from 'mongoose';
+
 export const getAllTaxYears = async () => {
-  try {
-    const years = await TaxYear.find({}).sort({ assessmentYear: -1 });
-    if (years && years.length > 0) return years;
-  } catch (err) {
-    // Database offline fallback
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const years = await TaxYear.find({}).sort({ assessmentYear: -1 });
+      if (years && years.length > 0) return years;
+    } catch (err) {}
   }
 
   return [
@@ -49,39 +51,39 @@ export const getAllTaxYears = async () => {
 };
 
 export const getCompleteRulePackage = async (assessmentYear = '2024-2025') => {
-  try {
-    const taxYear = await TaxYear.findOne({ assessmentYear });
-    if (taxYear) {
-      const taxYearId = taxYear._id;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const taxYear = await TaxYear.findOne({ assessmentYear });
+      if (taxYear) {
+        const taxYearId = taxYear._id;
 
-      const [slabs, thresholds, categories, incomeCategories, deductions, rebates, minimumTaxes, surcharges, sources] =
-        await Promise.all([
-          TaxSlab.find({ taxYearId }).populate('sourceId').sort({ sequence: 1 }),
-          TaxThreshold.find({ taxYearId }).populate('sourceId'),
-          TaxpayerCategory.find({ active: true }).populate('sourceId'),
-          IncomeCategory.find({ active: true }).populate('sourceId'),
-          DeductionRule.find({ taxYearId }).populate('sourceId'),
-          TaxRebateRule.find({ taxYearId }).populate('sourceId'),
-          MinimumTaxRule.find({ taxYearId }).populate('sourceId'),
-          SurchargeRule.find({ taxYearId }).populate('sourceId').sort({ lowerNetWealth: 1 }),
-          TaxSource.find({ active: true }),
-        ]);
+        const [slabs, thresholds, categories, incomeCategories, deductions, rebates, minimumTaxes, surcharges, sources] =
+          await Promise.all([
+            TaxSlab.find({ taxYearId }).populate('sourceId').sort({ sequence: 1 }),
+            TaxThreshold.find({ taxYearId }).populate('sourceId'),
+            TaxpayerCategory.find({ active: true }).populate('sourceId'),
+            IncomeCategory.find({ active: true }).populate('sourceId'),
+            DeductionRule.find({ taxYearId }).populate('sourceId'),
+            TaxRebateRule.find({ taxYearId }).populate('sourceId'),
+            MinimumTaxRule.find({ taxYearId }).populate('sourceId'),
+            SurchargeRule.find({ taxYearId }).populate('sourceId').sort({ lowerNetWealth: 1 }),
+            TaxSource.find({ active: true }),
+          ]);
 
-      return {
-        taxYear,
-        slabs,
-        thresholds,
-        categories,
-        incomeCategories,
-        deductions,
-        rebates,
-        minimumTaxes,
-        surcharges,
-        sources,
-      };
-    }
-  } catch (err) {
-    console.warn(`[RuleService] Falling back to structured memory rules for ${assessmentYear}:`, err.message);
+        return {
+          taxYear,
+          slabs,
+          thresholds,
+          categories,
+          incomeCategories,
+          deductions,
+          rebates,
+          minimumTaxes,
+          surcharges,
+          sources,
+        };
+      }
+    } catch (err) {}
   }
 
   // Resilient fallback structure

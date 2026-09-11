@@ -84,7 +84,15 @@ const taxCalculationSchema = new mongoose.Schema(
     ],
     calculationVersion: {
       type: String,
-      default: 'v2.0-act2023',
+      default: 'v2.1.0',
+    },
+    taxRuleVersion: {
+      type: String,
+      default: 'v2024.1-nbr',
+    },
+    sourceVersion: {
+      type: String,
+      default: 'src-act12-2023',
     },
   },
   {

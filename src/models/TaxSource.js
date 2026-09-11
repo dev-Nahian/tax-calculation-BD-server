@@ -17,9 +17,16 @@ const taxSourceSchema = new mongoose.Schema(
         'NBR_RULE',
         'NBR_SRO',
         'NBR_GENERAL_ORDER',
+        'NBR_OFFICIAL_NOTICE',
         'GOVERNMENT_BUDGET',
       ],
       default: 'NBR_ACT',
+    },
+    ruleClassification: {
+      type: String,
+      enum: ['OFFICIAL_RULE', 'EXPLANATION', 'APPLICATION_CALCULATION'],
+      default: 'OFFICIAL_RULE',
+      required: true,
     },
     authority: {
       type: String,
@@ -61,6 +68,21 @@ const taxSourceSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    status: {
+      type: String,
+      enum: ['draft', 'underReview', 'verified', 'active', 'archived'],
+      default: 'active',
+      index: true,
+    },
+    lastVerifiedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     retrievedAt: {
       type: Date,
       default: Date.now,
@@ -78,6 +100,7 @@ const taxSourceSchema = new mongoose.Schema(
 
 taxSourceSchema.index({ sourceType: 1, assessmentYear: 1 });
 taxSourceSchema.index({ referenceNumber: 1 });
+taxSourceSchema.index({ status: 1 });
 
 const TaxSource = mongoose.model('TaxSource', taxSourceSchema);
 export default TaxSource;

@@ -25,6 +25,17 @@ export const getSources = async (req, res, next) => {
   }
 };
 
+export const getSourcesByYear = async (req, res, next) => {
+  try {
+    const { year } = req.params;
+    const rulePackage = await getCompleteRulePackage(year);
+    const sources = rulePackage?.sources || [];
+    return successResponse(res, `Official NBR tax sources for ${year} retrieved successfully`, sources);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getCategories = async (req, res, next) => {
   try {
     const categories = await getTaxpayerCategories();
