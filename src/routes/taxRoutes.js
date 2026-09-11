@@ -6,7 +6,8 @@ import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/estimate', taxEstimateValidationRules, validateRequest, calculateTaxEstimate);
+router.post('/estimate', calculateTaxEstimate);
+router.post('/calculate', calculateTaxEstimate);
 router.get('/history', protect, getUserTaxHistory);
 
 export default router;

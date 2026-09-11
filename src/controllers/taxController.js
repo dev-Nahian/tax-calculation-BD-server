@@ -1,48 +1,16 @@
-import { getRulesByYear } from '../services/ruleService.js';
-import { estimateTax } from '../tax-engine/index.js';
-import TaxRecord from '../models/TaxRecord.js';
+import { TaxCalculationService } from '../tax-engine/index.js';
+import { TaxCalculation } from '../models/index.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 
 export const calculateTaxEstimate = async (req, res, next) => {
   try {
-    const {
-      assessmentYear = '2024-2025',
-      category = 'general',
-      zone = 'dhaka_chattogram',
-      inputs = {},
-      saveRecord = false,
-    } = req.body;
-
-    const rule = await getRulesByYear(assessmentYear);
-    const result = estimateTax({ category, zone, inputs }, rule);
-
-    let savedRecordId = null;
-    if (saveRecord && req.user?._id) {
-      try {
-        const record = await TaxRecord.create({
-          userId: req.user._id,
-          assessmentYear,
-          category,
-          zone,
-          inputs,
-          results: result,
-        });
-        savedRecordId = record._id;
-      } catch (err) {
-        console.warn('Could not persist tax record:', err.message);
-      }
-    }
-
-    return successResponse(res, 'Tax estimate calculated successfully', {
-      assessmentYear,
-      category,
-      zone,
-      inputs,
-      results: result,
-      savedRecordId,
-      disclaimer: 'This estimate is provided for educational and informational purposes only based on Bangladesh Income Tax Act 2023. It is not official tax filing advice.',
-    });
+    const { saveRecord = false, ...payload } = req.body;
+    const result = await TaxCalculationService.compute(payload, req.user, saveRecord);
+    return successResponse(res, 'Tax calculation completed successfully', result);
   } catch (error) {
+    if (error.name === 'TaxValidationError') {
+      return errorResponse(res, error.message, 422, error.errors);
+    }
     next(error);
   }
 };
@@ -52,7 +20,7 @@ export const getUserTaxHistory = async (req, res, next) => {
     if (!req.user?._id) {
       return errorResponse(res, 'User authentication required', 401);
     }
-    const records = await TaxRecord.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    const records = await TaxCalculation.find({ userId: req.user._id }).sort({ createdAt: -1 });
     return successResponse(res, 'Tax calculation history retrieved', records);
   } catch (error) {
     next(error);

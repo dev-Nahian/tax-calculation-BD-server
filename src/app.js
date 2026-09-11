@@ -11,6 +11,7 @@ import {
   getSourcesByYear,
   getSources,
 } from './controllers/ruleController.js';
+import { calculateTaxEstimate } from './controllers/taxController.js';
 
 const app = express();
 
@@ -38,6 +39,8 @@ app.get('/api/tax-years/:year', getRuleByYear);
 app.get('/api/tax-rules/:year', getRuleByYear);
 app.get('/api/tax-sources/:year', getSourcesByYear);
 app.get('/api/tax-sources', getSources);
+app.post('/api/tax/calculate', calculateTaxEstimate);
+app.post('/api/tax/estimate', calculateTaxEstimate);
 
 // Admin Source & Rule Management API
 app.use('/api/admin', adminRoutes);
