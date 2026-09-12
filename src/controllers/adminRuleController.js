@@ -17,12 +17,20 @@ import {
   verifyTaxYearAgainstNBR,
 } from '../services/taxSourceWorkflowService.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Log an administrative mutation to the immutable audit trail
  */
 const logAdminAction = async (adminUser, action, collectionName, documentId, before, after) => {
   try {
+    logger.adminAction({
+      adminId: adminUser?._id,
+      action,
+      target: `${collectionName}:${documentId}`,
+      details: { before, after },
+    });
+
     if (adminUser?._id) {
       await AdminAuditLog.create({
         adminId: adminUser._id,
@@ -35,7 +43,7 @@ const logAdminAction = async (adminUser, action, collectionName, documentId, bef
       });
     }
   } catch (err) {
-    console.warn('[AdminAudit] Could not write audit log:', err.message);
+    logger.warn('[AdminAudit] Could not write audit log:', { error: err.message });
   }
 };
 

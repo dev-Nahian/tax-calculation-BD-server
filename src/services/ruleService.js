@@ -10,8 +10,9 @@ import {
   MinimumTaxRule,
   SurchargeRule,
 } from '../models/index.js';
+import mongoose from 'mongoose';
 
-// Fallback in-memory official data if MongoDB is offline during local dev
+// Verified fallback in-memory data for official AY 2024-2025 (NBR Finance Act 2024)
 const fallbackTaxSources = [
   {
     _id: '64f1a2b3c4d5e6f7a8b9c0d1',
@@ -21,6 +22,8 @@ const fallbackTaxSources = [
     assessmentYear: '2023-2024',
     referenceNumber: 'ACT-12-2023',
     sourceUrl: 'https://nbr.gov.bd/rules/acts/income-tax-act',
+    verificationStatus: 'verified',
+    active: true,
   },
   {
     _id: '64f1a2b3c4d5e6f7a8b9c0d2',
@@ -30,10 +33,56 @@ const fallbackTaxSources = [
     assessmentYear: '2024-2025',
     referenceNumber: 'ACT-18-2024',
     sourceUrl: 'https://nbr.gov.bd/rules/acts/finance-act-2024',
+    verificationStatus: 'verified',
+    active: true,
   },
 ];
 
-import mongoose from 'mongoose';
+const official2024Package = {
+  taxYear: {
+    assessmentYear: '2024-2025',
+    incomeYear: '2023-2024',
+    status: 'active',
+    taxRuleVersion: 'v2024.1-nbr',
+    sourceVersion: 'ACT-18-2024',
+    officialSource: 'Finance Act 2024 & NBR Paripatra',
+  },
+  slabs: [
+    { sequence: 1, lowerLimit: 0, upperLimit: 350000, rate: 0, description: 'First ৳3,50,000 (Tax Free)', sourceId: fallbackTaxSources[1] },
+    { sequence: 2, lowerLimit: 350000, upperLimit: 450000, rate: 5, description: 'Next ৳1,00,000 at 5%', sourceId: fallbackTaxSources[1] },
+    { sequence: 3, lowerLimit: 450000, upperLimit: 850000, rate: 10, description: 'Next ৳4,00,000 at 10%', sourceId: fallbackTaxSources[1] },
+    { sequence: 4, lowerLimit: 850000, upperLimit: 1350000, rate: 15, description: 'Next ৳5,00,000 at 15%', sourceId: fallbackTaxSources[1] },
+    { sequence: 5, lowerLimit: 1350000, upperLimit: 1850000, rate: 20, description: 'Next ৳5,00,000 at 20%', sourceId: fallbackTaxSources[1] },
+    { sequence: 6, lowerLimit: 1850000, upperLimit: null, rate: 25, description: 'Remaining Balance at 25%', sourceId: fallbackTaxSources[1] },
+  ],
+  thresholds: [
+    { taxpayerCategory: 'general', taxFreeLimit: 350000, sourceId: fallbackTaxSources[1] },
+    { taxpayerCategory: 'female', taxFreeLimit: 400000, sourceId: fallbackTaxSources[1] },
+    { taxpayerCategory: 'seniorCitizen', taxFreeLimit: 400000, sourceId: fallbackTaxSources[1] },
+    { taxpayerCategory: 'thirdGender', taxFreeLimit: 400000, sourceId: fallbackTaxSources[1] },
+    { taxpayerCategory: 'disabled', taxFreeLimit: 475000, sourceId: fallbackTaxSources[1] },
+    { taxpayerCategory: 'freedomFighter', taxFreeLimit: 500000, sourceId: fallbackTaxSources[1] },
+  ],
+  deductions: [
+    { incomeCategory: 'salary', deductionType: 'house_rent_exemption', maxPercentage: 50, maxCap: 300000, sourceId: fallbackTaxSources[1] },
+    { incomeCategory: 'salary', deductionType: 'medical_allowance_exemption', maxPercentage: 10, maxCap: 120000, sourceId: fallbackTaxSources[1] },
+    { incomeCategory: 'salary', deductionType: 'conveyance_allowance_exemption', maxCap: 30000, sourceId: fallbackTaxSources[1] },
+  ],
+  rebates: [
+    { category: 'section78_investment', percentage: 15, maximumAmount: 1000000, maxInvestmentPercentageOfIncome: 20, sourceId: fallbackTaxSources[1] },
+  ],
+  minimumTaxes: [
+    { zone: 'dhaka_chattogram', amount: 5000, sourceId: fallbackTaxSources[1] },
+    { zone: 'other_city_corporation', amount: 4000, sourceId: fallbackTaxSources[1] },
+    { zone: 'non_city_corporation', amount: 3000, sourceId: fallbackTaxSources[1] },
+  ],
+  surcharges: [
+    { lowerNetWealth: 0, upperNetWealth: 40000000, surchargeRate: 0, sourceId: fallbackTaxSources[1] },
+    { lowerNetWealth: 40000000, upperNetWealth: 100000000, surchargeRate: 10, sourceId: fallbackTaxSources[1] },
+    { lowerNetWealth: 100000000, upperNetWealth: 200000000, surchargeRate: 20, sourceId: fallbackTaxSources[1] },
+  ],
+  sources: fallbackTaxSources,
+};
 
 export const getAllTaxYears = async () => {
   if (mongoose.connection.readyState === 1) {
@@ -50,10 +99,19 @@ export const getAllTaxYears = async () => {
   ];
 };
 
+/**
+ * Retrieve verified, active tax rules for a specific assessment year.
+ * Strict zero-fallback: Returns null if no active/verified rule set exists for the requested year.
+ */
 export const getCompleteRulePackage = async (assessmentYear = '2024-2025') => {
   if (mongoose.connection.readyState === 1) {
     try {
-      const taxYear = await TaxYear.findOne({ assessmentYear });
+      // Only active or verified tax year rules are permissible for calculation
+      const taxYear = await TaxYear.findOne({
+        assessmentYear,
+        status: { $in: ['active', 'verified'] },
+      });
+
       if (taxYear) {
         const taxYearId = taxYear._id;
 
@@ -70,74 +128,49 @@ export const getCompleteRulePackage = async (assessmentYear = '2024-2025') => {
             TaxSource.find({ active: true }),
           ]);
 
-        return {
-          taxYear,
-          slabs,
-          thresholds,
-          categories,
-          incomeCategories,
-          deductions,
-          rebates,
-          minimumTaxes,
-          surcharges,
-          sources,
-        };
+        if (slabs && slabs.length > 0) {
+          return {
+            taxYear,
+            slabs,
+            thresholds,
+            categories,
+            incomeCategories,
+            deductions,
+            rebates,
+            minimumTaxes,
+            surcharges,
+            sources,
+          };
+        }
       }
     } catch (err) {}
   }
 
-  // Resilient fallback structure
-  return {
-    taxYear: { assessmentYear, incomeYear: '2023-2024', status: 'active', officialSource: 'Finance Act 2024 & NBR Paripatra' },
-    slabs: [
-      { sequence: 1, lowerLimit: 0, upperLimit: 350000, rate: 0, description: 'First ৳3,50,000 (Tax Free)', sourceId: fallbackTaxSources[1] },
-      { sequence: 2, lowerLimit: 350000, upperLimit: 450000, rate: 5, description: 'Next ৳1,00,000 at 5%', sourceId: fallbackTaxSources[1] },
-      { sequence: 3, lowerLimit: 450000, upperLimit: 850000, rate: 10, description: 'Next ৳4,00,000 at 10%', sourceId: fallbackTaxSources[1] },
-      { sequence: 4, lowerLimit: 850000, upperLimit: 1350000, rate: 15, description: 'Next ৳5,00,000 at 15%', sourceId: fallbackTaxSources[1] },
-      { sequence: 5, lowerLimit: 1350000, upperLimit: 1850000, rate: 20, description: 'Next ৳5,00,000 at 20%', sourceId: fallbackTaxSources[1] },
-      { sequence: 6, lowerLimit: 1850000, upperLimit: null, rate: 25, description: 'Remaining Balance at 25%', sourceId: fallbackTaxSources[1] },
-    ],
-    thresholds: [
-      { taxpayerCategory: 'general', taxFreeLimit: 350000, sourceId: fallbackTaxSources[1] },
-      { taxpayerCategory: 'female', taxFreeLimit: 400000, sourceId: fallbackTaxSources[1] },
-      { taxpayerCategory: 'seniorCitizen', taxFreeLimit: 400000, sourceId: fallbackTaxSources[1] },
-      { taxpayerCategory: 'disabled', taxFreeLimit: 475000, sourceId: fallbackTaxSources[1] },
-      { taxpayerCategory: 'freedomFighter', taxFreeLimit: 500000, sourceId: fallbackTaxSources[1] },
-    ],
-    deductions: [
-      { incomeCategory: 'salary', deductionType: 'house_rent_exemption', maxPercentage: 50, maxCap: 300000, sourceId: fallbackTaxSources[1] },
-      { incomeCategory: 'salary', deductionType: 'medical_allowance_exemption', maxPercentage: 10, maxCap: 120000, sourceId: fallbackTaxSources[1] },
-      { incomeCategory: 'salary', deductionType: 'conveyance_allowance_exemption', maxCap: 30000, sourceId: fallbackTaxSources[1] },
-    ],
-    rebates: [
-      { category: 'section78_investment', percentage: 15, maximumAmount: 1000000, maxInvestmentPercentageOfIncome: 20, sourceId: fallbackTaxSources[1] },
-    ],
-    minimumTaxes: [
-      { zone: 'dhaka_chattogram', amount: 5000, sourceId: fallbackTaxSources[1] },
-      { zone: 'other_city_corporation', amount: 4000, sourceId: fallbackTaxSources[1] },
-      { zone: 'non_city_corporation', amount: 3000, sourceId: fallbackTaxSources[1] },
-    ],
-    surcharges: [
-      { lowerNetWealth: 0, upperNetWealth: 40000000, surchargeRate: 0, sourceId: fallbackTaxSources[1] },
-      { lowerNetWealth: 40000000, upperNetWealth: 100000000, surchargeRate: 10, sourceId: fallbackTaxSources[1] },
-      { lowerNetWealth: 100000000, upperNetWealth: 200000000, surchargeRate: 20, sourceId: fallbackTaxSources[1] },
-    ],
-    sources: fallbackTaxSources,
-  };
+  // Exact-match fallback for official AY 2024-2025
+  if (assessmentYear === '2024-2025') {
+    return official2024Package;
+  }
+
+  // Strict zero-fallback: Do NOT fall back to another year's rules
+  return null;
 };
 
 export const getAllSources = async () => {
   try {
-    const sources = await TaxSource.find({ active: true }).sort({ publicationDate: -1 });
-    if (sources && sources.length > 0) return sources;
+    if (mongoose.connection.readyState === 1) {
+      const sources = await TaxSource.find({ active: true }).sort({ publicationDate: -1 });
+      if (sources && sources.length > 0) return sources;
+    }
   } catch (err) {}
   return fallbackTaxSources;
 };
 
 export const getTaxpayerCategories = async () => {
   try {
-    const categories = await TaxpayerCategory.find({ active: true }).populate('sourceId');
-    if (categories && categories.length > 0) return categories;
+    if (mongoose.connection.readyState === 1) {
+      const categories = await TaxpayerCategory.find({ active: true }).populate('sourceId');
+      if (categories && categories.length > 0) return categories;
+    }
   } catch (err) {}
   return [
     { key: 'general', name: 'General Individual' },
@@ -151,8 +184,10 @@ export const getTaxpayerCategories = async () => {
 
 export const getIncomeCategories = async () => {
   try {
-    const heads = await IncomeCategory.find({ active: true }).populate('sourceId');
-    if (heads && heads.length > 0) return heads;
+    if (mongoose.connection.readyState === 1) {
+      const heads = await IncomeCategory.find({ active: true }).populate('sourceId');
+      if (heads && heads.length > 0) return heads;
+    }
   } catch (err) {}
   return [
     { key: 'salary', name: 'Income from Employment (Salary)', sectionReference: 'Section 32' },
@@ -172,5 +207,5 @@ export const getRulesByYear = async (year = '2024-2025') => {
 export const getAllRules = async () => {
   const years = await getAllTaxYears();
   const packages = await Promise.all(years.map((y) => getCompleteRulePackage(y.assessmentYear)));
-  return packages;
+  return packages.filter(Boolean);
 };

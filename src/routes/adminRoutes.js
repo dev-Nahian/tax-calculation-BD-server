@@ -16,10 +16,16 @@ import {
   getAdminAuditLogs,
 } from '../controllers/adminRuleController.js';
 import { protect, adminOnly } from '../middleware/authMiddleware.js';
+import { adminLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// Public / Protected Overview & Rules
+// Apply Authentication, RBAC (admin/super_admin/tax_officer) and Rate Limiter to ALL admin routes
+router.use(protect);
+router.use(adminOnly);
+router.use(adminLimiter);
+
+// Dashboard Overview & Rules Management
 router.get('/overview', getAdminOverview);
 router.get('/tax-rules', getAdminOverview);
 router.get('/tax-years', getTaxYearsList);
@@ -28,17 +34,17 @@ router.post('/tax-rules/:year/verify', verifyRules);
 
 // Specific Entity Endpoints
 router.get('/slabs', getTaxSlabsList);
-router.post('/slabs', protect, adminOnly, saveTaxSlab);
+router.post('/slabs', saveTaxSlab);
 
 router.get('/sources', getTaxSourcesList);
-router.post('/sources', protect, adminOnly, saveTaxSource);
+router.post('/sources', saveTaxSource);
 
 router.get('/rebates', getRebatesList);
 router.get('/minimum-tax', getMinimumTaxesList);
 router.get('/surcharge', getSurchargeList);
 
-router.get('/calculations', protect, adminOnly, getCalculationsAuditList);
-router.get('/users', protect, adminOnly, getAdminUsersList);
+router.get('/calculations', getCalculationsAuditList);
+router.get('/users', getAdminUsersList);
 router.get('/audit-logs', getAdminAuditLogs);
 
 export default router;

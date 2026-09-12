@@ -9,6 +9,8 @@ import DeductionRule from './DeductionRule.js';
 import MinimumTaxRule from './MinimumTaxRule.js';
 import SurchargeRule from './SurchargeRule.js';
 import TaxCalculation from './TaxCalculation.js';
+import TaxRule from './TaxRule.js';
+import TaxRecord from './TaxRecord.js';
 import User from './User.js';
 import AdminAuditLog from './AdminAuditLog.js';
 
@@ -24,6 +26,8 @@ export {
   MinimumTaxRule,
   SurchargeRule,
   TaxCalculation,
+  TaxRule,
+  TaxRecord,
   User,
   AdminAuditLog,
 };
@@ -40,6 +44,8 @@ export default {
   MinimumTaxRule,
   SurchargeRule,
   TaxCalculation,
+  TaxRule,
+  TaxRecord,
   User,
   AdminAuditLog,
 };

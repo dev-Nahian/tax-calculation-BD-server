@@ -59,7 +59,7 @@ export const getRuleByYear = async (req, res, next) => {
     const { year } = req.params;
     const rulePackage = await getCompleteRulePackage(year);
     if (!rulePackage) {
-      return errorResponse(res, `No tax rules found for assessment year: ${year}`, 404);
+      return errorResponse(res, 'Tax calculation is currently unavailable for this assessment year.', 404);
     }
     return successResponse(res, `Complete tax rules for AY ${year} retrieved successfully`, rulePackage);
   } catch (error) {

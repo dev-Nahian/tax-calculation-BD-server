@@ -100,7 +100,6 @@ const taxSourceSchema = new mongoose.Schema(
 
 taxSourceSchema.index({ sourceType: 1, assessmentYear: 1 });
 taxSourceSchema.index({ referenceNumber: 1 });
-taxSourceSchema.index({ status: 1 });
 
 const TaxSource = mongoose.model('TaxSource', taxSourceSchema);
 export default TaxSource;
