@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node tests/taxEngine.test.js && node tests/security.test.js",
+    "test": "node tests/taxEngine.test.js && node tests/engineBoundaries.test.js && node tests/security.test.js && node tests/apiTesting.test.js && node tests/databaseGovernance.test.js",
     "seed": "node src/seed/seedRules.js",
     "seed:architecture": "node src/seed/seedTaxArchitecture.js"
   },
