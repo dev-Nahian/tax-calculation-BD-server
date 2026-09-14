@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { config } from './env.js';
 import { defaultRulesData } from '../seed/seedRules.js';
 import TaxRule from '../models/TaxRule.js';
+import User from '../models/User.js';
 
 let isConnected = false;
 
@@ -29,6 +30,37 @@ export const connectDB = async () => {
       }
     } catch (seedErr) {
       console.warn(`[MongoDB Seed Notice] ${seedErr.message}`);
+    }
+
+    // Auto-seed default Administrator and test User if not exists
+    try {
+      const adminExists = await User.findOne({ email: 'admin@taxbd.gov.bd' });
+      if (!adminExists) {
+        await User.create({
+          name: 'Chief Tax Policy Administrator',
+          email: 'admin@taxbd.gov.bd',
+          password: 'Admin@TaxBD2026#',
+          role: 'admin',
+          category: 'general',
+          zone: 'dhaka_chattogram',
+        });
+        console.log(`[MongoDB] Auto-seeded default administrator account: admin@taxbd.gov.bd`);
+      }
+
+      const standardUserExists = await User.findOne({ email: 'taxpayer@gmail.com' });
+      if (!standardUserExists) {
+        await User.create({
+          name: 'Rafiqul Islam (Standard Taxpayer)',
+          email: 'taxpayer@gmail.com',
+          password: 'TaxPayer@2026',
+          role: 'user',
+          category: 'general',
+          zone: 'dhaka_chattogram',
+        });
+        console.log(`[MongoDB] Auto-seeded standard taxpayer user account: taxpayer@gmail.com`);
+      }
+    } catch (userErr) {
+      console.warn(`[MongoDB User Seed Notice] ${userErr.message}`);
     }
   } catch (error) {
     console.warn(`[MongoDB Warning] Could not connect to MongoDB at ${sanitizeMongoUri(config.mongoUri)}: ${error.message}`);

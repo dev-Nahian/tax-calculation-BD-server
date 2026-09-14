@@ -6,6 +6,7 @@ import { config } from './config/env.js';
 import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/adminRoutes.js';
 import taxRoutes from './routes/taxRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 import { mongoSanitize } from './middleware/sanitizeMiddleware.js';
 import { apiLimiter, taxCalculationLimiter } from './middleware/rateLimiter.js';
@@ -89,6 +90,7 @@ app.get('/api/tax-years/:year', getRuleByYear);
 app.get('/api/tax-rules/:year', getRuleByYear);
 app.get('/api/tax-sources/:year', getSourcesByYear);
 app.get('/api/tax-sources', getSources);
+app.use('/api/auth', authRoutes);
 
 app.post(
   '/api/tax/calculate',
